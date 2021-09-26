@@ -28,7 +28,7 @@ func Run() {
 	var opts []grpc.ServerOption
 	grpcServer := grpc.NewServer(opts...)
 
-	pb.RegisterBrokerServer(grpcServer, &handlers)
+	pb.RegisterBrokerServer(grpcServer, handlers)
 
 	fmt.Println("Server listen address:", *serverAddress)
 

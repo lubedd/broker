@@ -17,28 +17,6 @@ func NewQueuesService() *QueuesService {
 	}
 }
 
-func (q *QueuesService) AddMessage(queueName, message string) {
-	q.mu.Lock()
-	if _, exist := q.Queues[queueName]; !exist {
-		q.newQueue(queueName)
-	}
-	q.Queues[queueName].Messages = append(q.Queues[queueName].Messages, message)
-
-	q.mu.Unlock()
-}
-
-func (q *QueuesService) ConsumerTaskAccepted(queueName string, id uint64) {
-	q.mu.Lock()
-	if queue, exist := q.Queues[queueName]; exist {
-		if consumer, exist := queue.Consumers[id]; exist {
-			if consumer.WaitSignal {
-				consumer.Signal <- domain.SigConsumerAcceptTask
-			}
-		}
-	}
-	q.mu.Unlock()
-}
-
 func (q *QueuesService) newQueue(queueName string) {
 	q.Queues[queueName] = &domain.Queue{
 		Name:      queueName,
@@ -48,6 +26,16 @@ func (q *QueuesService) newQueue(queueName string) {
 
 	go q.newObserver(q.Queues[queueName])
 	go q.sendMessagesByTimer(q.Queues[queueName])
+}
+
+func (q *QueuesService) AddMessage(queueName, message string) {
+	q.mu.Lock()
+	if _, exist := q.Queues[queueName]; !exist {
+		q.newQueue(queueName)
+	}
+	q.Queues[queueName].Messages = append(q.Queues[queueName].Messages, message)
+
+	q.mu.Unlock()
 }
 
 func (q *QueuesService) AddConsumer(queueName string, stream pb.Broker_ConsumerChatServer) uint64 {
@@ -64,4 +52,16 @@ func (q *QueuesService) AddConsumer(queueName string, stream pb.Broker_ConsumerC
 	}
 	q.mu.Unlock()
 	return id
+}
+
+func (q *QueuesService) ConsumerTaskAccepted(queueName string, id uint64) {
+	q.mu.Lock()
+	if queue, exist := q.Queues[queueName]; exist {
+		if consumer, exist := queue.Consumers[id]; exist {
+			if consumer.WaitSignal {
+				consumer.Signal <- domain.SigConsumerAcceptTask
+			}
+		}
+	}
+	q.mu.Unlock()
 }

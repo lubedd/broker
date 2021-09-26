@@ -3,21 +3,28 @@ package grpc
 import (
 	"broker/broker/internal/domain"
 	"broker/broker/internal/exchange"
-	"broker/broker/internal/queues"
 	pb "broker/broker/internal/proto"
+	"broker/broker/internal/queues"
 	"context"
 )
+
+//go:generate mockgen -source=handlers.go -destination=mocks/mock.go
+
+type BrokerServer interface {
+	AddMessage(context.Context, *pb.RequestProducer) (*pb.ResponseProducer, error)
+	ConsumerChat(pb.Broker_ConsumerChatServer) error
+}
 
 type Handlers struct {
 	exchange exchange.ExchangeService
 	queues   queues.Queues
 }
 
-func NewHandlers(exchange exchange.ExchangeService, queues queues.Queues) Handlers {
+func NewHandlers(exchange exchange.ExchangeService, queues queues.Queues) BrokerServer {
 	return Handlers{exchange, queues}
 }
 
-func (h *Handlers) AddMessage(c context.Context, request *pb.RequestProducer) (response *pb.ResponseProducer, err error) {
+func (h Handlers) AddMessage(c context.Context, request *pb.RequestProducer) ( *pb.ResponseProducer,  error) {
 	message := domain.Message{
 		MessageText: request.MessageText,
 		RoutingKey:  request.RoutingKey,
@@ -27,7 +34,7 @@ func (h *Handlers) AddMessage(c context.Context, request *pb.RequestProducer) (r
 	return &pb.ResponseProducer{Message: domain.ProducerTaskAccepted}, nil
 }
 
-func (h *Handlers) ConsumerChat(stream pb.Broker_ConsumerChatServer) (err error) {
+func (h Handlers) ConsumerChat(stream pb.Broker_ConsumerChatServer) (err error) {
 	for {
 		resp, err := stream.Recv()
 		if err != nil {

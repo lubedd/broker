@@ -6,25 +6,20 @@ import (
 	pb "broker/broker/internal/proto"
 	"broker/broker/internal/queues"
 	"context"
+	"io"
+	"log"
 )
-
-//go:generate mockgen -source=handlers.go -destination=mocks/mock.go
-
-type BrokerServer interface {
-	AddMessage(context.Context, *pb.RequestProducer) (*pb.ResponseProducer, error)
-	ConsumerChat(pb.Broker_ConsumerChatServer) error
-}
 
 type Handlers struct {
 	exchange exchange.ExchangeService
 	queues   queues.Queues
 }
 
-func NewHandlers(exchange exchange.ExchangeService, queues queues.Queues) BrokerServer {
+func NewHandlers(exchange exchange.ExchangeService, queues queues.Queues) Handlers {
 	return Handlers{exchange, queues}
 }
 
-func (h Handlers) AddMessage(c context.Context, request *pb.RequestProducer) ( *pb.ResponseProducer,  error) {
+func (h Handlers) AddMessage(c context.Context, request *pb.RequestProducer) (response *pb.ResponseProducer, err error) {
 	message := domain.Message{
 		MessageText: request.MessageText,
 		RoutingKey:  request.RoutingKey,
@@ -34,10 +29,11 @@ func (h Handlers) AddMessage(c context.Context, request *pb.RequestProducer) ( *
 	return &pb.ResponseProducer{Message: domain.ProducerTaskAccepted}, nil
 }
 
-func (h Handlers) ConsumerChat(stream pb.Broker_ConsumerChatServer) (err error) {
+func (h Handlers) ConsumerChat(stream pb.Broker_ConsumerChatServer) error {
 	for {
 		resp, err := stream.Recv()
-		if err != nil {
+		if err != io.EOF && err != nil {
+			log.Println(err)
 			break
 		}
 

@@ -13,7 +13,7 @@ import (
 )
 
 func Run() {
-	serverAddress := flag.String("address", "127.0.0.1:5300", "a string")
+	serverAddress := flag.String("address", ":5300", "a string")
 	flag.Parse()
 
 	newQueues := queues.NewQueues()
